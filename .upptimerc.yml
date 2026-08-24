@@ -1,23 +1,47 @@
 owner: conscherry
 repo: status
 
+assignees:
+  - xgarciadevs
+
+secrets:
+  - KINDBOT_API_URL
+  - PROJECT_HOST_URL
+
 sites:
   - name: Conscherry
     url: https://conscherry.com
+  - name: Conscherry Dashboard
+    url: https://dashboard.conscherry.com
   - name: Indenti
     url: https://indenti.net
+  - name: API Services
+    url: https://conscherry.com/api/health
+  - name: Labs API Services
+    url: https://labs.conscherry.com/api/health
+  - name: KindBot Health
+    url: $KINDBOT_API_URL
+  - name: Labs
+    url: https://labs.conscherry.com/
+  - name: The Gobble Project
+    url: https://playgobble.xyz
+  - name: Project Host
+    url: $PROJECT_HOST_URL
 
 status-website:
   # Add your custom domain name, or remove the `cname` line if you don't have a domain
   # Uncomment the `baseUrl` line if you don't have a custom domain and add your repo name there
   # cname: demo.upptime.js.org
   baseUrl: /status
-  logoUrl: https://conscherry.com/branding/Conscherry_Logo.png
+  logoUrl: https://conscherry.github.io/status/logo.png
+  favicon: https://conscherry.github.io/status/logo.png
   name: Conscherry
-  introTitle: "**Upptime** is the open-source uptime monitor and status page, powered entirely by GitHub."
-  introMessage: This is a sample status page which uses **real-time** data from our [GitHub repository](https://github.com/upptime/upptime). No server required — just GitHub Actions, Issues, and Pages. [**Get your own for free**](https://github.com/upptime/upptime)
+  introTitle: "Welcome to the Conscherry Status Page"
+  introMessage: Here you can find the current status of our services and any ongoing incidents. If you have any questions or concerns, please reach out to us through our support channels.
+  theme: custom
+  themeUrl: https://conscherry.github.io/status/theme.css
   navbar:
-    - title: Status
+    - title: Overview
       href: /
     - title: GitHub
       href: https://github.com/$OWNER/$REPO
