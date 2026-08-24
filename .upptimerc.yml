@@ -36,6 +36,7 @@ sites:
 status-website:
   cname: status.conscherry.com
   baseUrl: /status
+  logoHref: https://status.conscherry.com
   logoUrl: https://status.conscherry.com/logo.png
   favicon: https://status.conscherry.com/logo.png
   name: Conscherry
@@ -47,7 +48,7 @@ status-website:
     - title: Website
       href: https://conscherry.com
   # theme: custom
-  themeUrl: https://status.conscherry.com/theme.css
+  # themeUrl: https://status.conscherry.com/theme.css
   # links:
   #   - rel: stylesheet
   #     href: https://status.conscherry.com/theme.css
