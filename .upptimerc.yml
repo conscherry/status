@@ -48,4 +48,8 @@ status-website:
     - title: Website
       href: https://conscherry.com
   theme: light
-  themeUrl: https://status.conscherry.com/theme.css
+  themeUrl: https://raw.githubusercontent.com/conscherry/status/refs/heads/master/assets/theme.css
+  links:
+    - rel: stylesheet
+      href: https://raw.githubusercontent.com/conscherry/status/refs/heads/master/assets/theme.css
+      
