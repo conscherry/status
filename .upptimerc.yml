@@ -35,7 +35,6 @@ sites:
 
 status-website:
   cname: status.conscherry.com
-  baseUrl: /status
   logoHref: https://status.conscherry.com
   logoUrl: https://status.conscherry.com/logo.png
   favicon: https://status.conscherry.com/logo.png
