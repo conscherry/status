@@ -35,7 +35,7 @@ sites:
 
 status-website:
   cname: status.conscherry.com
-  # baseUrl: /status
+  baseUrl: /status
   logoUrl: https://conscherry.github.io/status/logo.png
   favicon: https://conscherry.github.io/status/logo.png
   name: Conscherry
