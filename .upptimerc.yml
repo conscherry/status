@@ -41,10 +41,14 @@ status-website:
   name: Conscherry
   introTitle: "Welcome to the Conscherry Status Page"
   introMessage: Here you can find the current status of our services and any ongoing incidents. If you have any questions or concerns, please reach out to us through our support channels.
-  theme: custom
-  themeUrl: https://status.conscherry.com/theme.css
   navbar:
     - title: Overview
       href: /
     - title: Website
       href: https://conscherry.com
+  theme: custom
+  themeUrl: https://status.conscherry.com/theme.css
+  links:
+    - rel: stylesheet
+      href: https://status.conscherry.com/theme.css
+  
