@@ -7,6 +7,7 @@ assignees:
 secrets:
   - KINDBOT_API_URL
   - PROJECT_HOST_URL
+  - PROJECT_HOST_PORT
 
 sites:
   - name: Conscherry
@@ -20,13 +21,17 @@ sites:
   - name: Labs API Services
     url: https://labs.conscherry.com/api/health
   - name: KindBot Health
+    check: "tcp-ping"
     url: $KINDBOT_API_URL
+    port: $PROJECT_HOST_PORT
   - name: Labs
     url: https://labs.conscherry.com/
   - name: The Gobble Project
     url: https://playgobble.xyz
   - name: Project Host
+    check: "tcp-ping"
     url: $PROJECT_HOST_URL
+    port: $PROJECT_HOST_PORT
 
 status-website:
   # Add your custom domain name, or remove the `cname` line if you don't have a domain
@@ -45,6 +50,8 @@ status-website:
       href: /
     - title: GitHub
       href: https://github.com/$OWNER/$REPO
+    - title: Website
+      href: https://conscherry.com
 
 # Upptime also supports notifications, assigning issues, and more
 # See https://upptime.js.org/docs/configuration
