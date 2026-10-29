@@ -616,6 +616,13 @@
     return proto + "//" + location.host + location.pathname.replace(/[^/]*$/, "") + "data/maintenance.ics";
   }
 
+  function subscribeMenu(id, cls, label) {
+    return '<details class="popover' + (cls ? " " + cls : "") + '" id="' + id + '"><summary class="btn' + (cls ? " btn-primary" : "") + '">' + (cls ? svg("cal") : "") + label + '</summary><div class="popover-panel">' +
+      '<a class="popover-link" href="https://conscherry.com/discord" rel="noopener"><strong>Discord</strong><span>Incident posts in our community server</span></a>' +
+      '<a class="popover-link" href="https://github.com/' + REPO + '" rel="noopener"><strong>GitHub</strong><span>Watch the repository for email updates</span></a>' +
+      '<a class="popover-link" href="' + esc(feedUrl("webcal:")) + '"><strong>Maintenance calendar</strong><span>Add planned work to your calendar app</span></a></div></details>';
+  }
+
   function sameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
 
   function renderMaintenance() {
@@ -644,7 +651,7 @@
     var upcoming = items.filter(function (m) { return m.inc.open && m.end.getTime() > now.getTime(); });
     var past = items.filter(function (m) { return !(m.inc.open && m.end.getTime() > now.getTime()); }).reverse().slice(0, 10);
 
-    var html = '<div class="view"><div class="page-head"><h1>Maintenance</h1><p>Planned work that may affect our services.</p><div class="row"><a class="btn btn-primary" href="' + esc(feedUrl("webcal:")) + '">' + svg("cal") + 'Subscribe in calendar</a><button class="btn" type="button" data-action="copy-feed">Copy feed link</button></div></div>';
+    var html = '<div class="view"><div class="page-head"><h1>Maintenance</h1><p>Planned work that may affect our services.</p><div class="row">' + subscribeMenu("subscribe-page", "popover-left", "Subscribe") + '</div></div>';
     if (state.incidentsFailed && !state.incidents) {
       html += '<p class="notice block">Maintenance details are unavailable right now. Check <a href="https://github.com/' + REPO + '/issues?q=label%3Amaintenance">GitHub</a>.</p>';
     } else {
@@ -807,9 +814,6 @@
     } else if (act === "ics") {
       var m = maintItems().filter(function (x) { return String(x.inc.id) === a.getAttribute("data-id"); })[0];
       if (m) download("maintenance-" + m.inc.id + ".ics", icsFile([m]), "text/calendar");
-    } else if (act === "copy-feed") {
-      var url = feedUrl("https:");
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { a.textContent = "Copied"; setTimeout(function () { a.textContent = "Copy feed link"; }, 1800); });
     } else if (act === "cal-prev" || act === "cal-next") {
       var d = new Date(state.cal.y, state.cal.m + (act === "cal-next" ? 1 : -1), 1);
       state.cal = { y: d.getFullYear(), m: d.getMonth() };
@@ -861,14 +865,12 @@
   });
   document.addEventListener("scroll", hideTip, { passive: true });
   document.addEventListener("pointerdown", function (e) {
-    var sub = document.getElementById("subscribe");
-    if (sub && sub.open && !sub.contains(e.target)) sub.open = false;
+    document.querySelectorAll(".popover[open]").forEach(function (p) { if (!p.contains(e.target)) p.open = false; });
     if (!e.target.closest || !(e.target.closest(".chart") || e.target.closest(".seg"))) hideTip();
   });
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
-    var sub = document.getElementById("subscribe");
-    if (sub) sub.open = false;
+    document.querySelectorAll(".popover[open]").forEach(function (p) { p.open = false; });
     hideTip();
   });
 
@@ -922,8 +924,8 @@
 
   var year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();
-  var feed = document.getElementById("feed-link");
-  if (feed) feed.href = feedUrl("webcal:");
+  var headMenu = document.getElementById("subscribe");
+  if (headMenu) headMenu.outerHTML = subscribeMenu("subscribe", "", "Subscribe");
   themePref = readTheme();
   paintTheme();
   loadAll(true);
