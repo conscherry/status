@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conscherry Status</title>
+<meta name="description" content="Live status, uptime and incident history for every Conscherry service.">
+<meta name="theme-color" content="#0d0d14">
+<link rel="icon" href="logo.png" type="image/png">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("theme");
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    else if (t !== "system") document.documentElement.setAttribute("data-theme", "dark");
+  } catch (e) {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }
+})();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#app">Skip to content</a>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="./" aria-label="Conscherry Status home">
+      <img class="brand-logo" src="https://conscherry.com/branding/conscherry_logo_blurb_red.png" width="160" height="53" alt="Conscherry" onerror="this.onerror=null;this.src='logo.png'">
+      <span class="brand-tag">Status</span>
+    </a>
+
+    <nav class="tabs" aria-label="Status navigation">
+      <a href="#/" data-route="overview">Overview</a>
+      <a href="#/history" data-route="history">History</a>
+      <a href="https://conscherry.com/help" rel="noopener">Help</a>
+    </nav>
+
+    <div class="header-actions">
+      <details class="popover" id="subscribe">
+        <summary class="btn btn-primary">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>
+          Subscribe
+        </summary>
+        <div class="popover-panel">
+          <p class="popover-title">Get notified about incidents</p>
+          <a class="popover-link" href="https://conscherry.com/discord" rel="noopener">
+            <strong>Discord</strong>
+            <span>Join the community for live updates.</span>
+          </a>
+          <a class="popover-link" href="https://github.com/conscherry/status" rel="noopener">
+            <strong>GitHub</strong>
+            <span>Watch the repository to get every incident by email.</span>
+          </a>
+        </div>
+      </details>
+      <button class="icon-btn" id="theme-cycle" type="button" aria-label="Change theme" title="Change theme"></button>
+    </div>
+  </div>
+</header>
+
+<main id="app" class="container" tabindex="-1">
+  <div class="loading" aria-hidden="true">
+    <div class="skeleton" style="height:9rem;border-radius:1rem"></div>
+    <div class="skeleton" style="height:5rem;border-radius:1rem;margin-top:1rem"></div>
+    <div class="skeleton" style="height:16rem;border-radius:1rem;margin-top:1rem"></div>
+  </div>
+  <noscript><p class="notice">This page needs JavaScript to show live status. You can also check <a href="https://github.com/conscherry/status">the status repository</a>.</p></noscript>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="https://conscherry.com/branding/conscherry_blue_text.png" width="208" height="69" alt="Conscherry" onerror="this.onerror=null;this.src='logo.png'">
+        <p>Independent creators building apps, games, and tools in public with a real, day-to-day community.</p>
+        <div class="seg" id="theme-seg" role="group" aria-label="Theme"></div>
+      </div>
+      <div class="footer-links">
+        <div>
+          <h2>Company</h2>
+          <nav aria-label="Company links">
+            <a href="https://conscherry.com/about-us">About</a>
+            <a href="https://conscherry.com/contact">Contact</a>
+            <a href="https://conscherry.com/team">Team</a>
+            <a href="https://conscherry.com/careers">Careers</a>
+          </nav>
+        </div>
+        <div>
+          <h2>Projects</h2>
+          <nav aria-label="Project links">
+            <a href="https://conscherry.com/projects">All projects</a>
+            <a href="https://labs.conscherry.com">Labs</a>
+            <a href="https://dashboard.conscherry.com">Dashboard</a>
+            <a href="https://playgobble.xyz">The Gobble Project</a>
+          </nav>
+        </div>
+        <div>
+          <h2>Support</h2>
+          <nav aria-label="Support links">
+            <a href="https://conscherry.com/help">Help center</a>
+            <a href="https://helpdesk.conscherry.com">Helpdesk</a>
+            <a href="https://conscherry.com/privacy">Privacy</a>
+            <a href="https://conscherry.com/terms">Terms</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2020 - <span id="year"></span> Conscherry. All rights reserved.</p>
+      <p>Maintained by Xavier Garcia &bull; Powered by <a href="https://upptime.js.org" rel="noopener">Upptime</a> &bull; <a href="https://github.com/conscherry/status" rel="noopener">View source</a></p>
+    </div>
+  </div>
+</footer>
+
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<script src="app.js" defer></script>
+</body>
+</html>
