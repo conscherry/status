@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Conscherry Status</title>
+  <meta name="description" content="Live status, uptime and incident history for every Conscherry service.">
+  <meta name="theme-color" content="#0d0d14">
+  <link rel="icon" href="logo.png" type="image/png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        else if (t !== "system") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+</head>
+
+<body>
+  <a class="skip-link" href="#app">Skip to content</a>
+
+  <header class="top">
+    <div class="top-inner">
+      <a class="brand" href="https://conscherry.com" aria-label="Conscherry home">
+        <img src="logo-nav.png" width="120" height="40" alt="Conscherry">
+      </a>
+
+      <nav class="tabs" aria-label="Status pages">
+        <a href="#/" data-route="overview">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 11l9-8 9 8" />
+            <path d="M5 10v10h14V10" />
+          </svg>
+          Overview
+        </a>
+        <a href="#/maintenance" data-route="maintenance">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M16 3v4M8 3v4M3 11h18" />
+          </svg>
+          Maintenance
+        </a>
+        <a href="#/history" data-route="history">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          History
+        </a>
+      </nav>
+
+      <div class="actions-top">
+        <details class="popover" id="subscribe">
+          <summary class="btn">Subscribe</summary>
+          <div class="popover-panel">
+            <a class="popover-link" href="https://conscherry.com/discord" rel="noopener">
+              <strong>Discord</strong>
+              <span>Incident posts in our community server</span>
+            </a>
+            <a class="popover-link" href="https://github.com/conscherry/status" rel="noopener">
+              <strong>GitHub</strong>
+              <span>Watch the repository for email updates</span>
+            </a>
+            <a class="popover-link" id="feed-link" href="data/maintenance.ics">
+              <strong>Maintenance calendar</strong>
+              <span>Add planned work to your calendar app</span>
+            </a>
+          </div>
+        </details>
+        <a class="btn" href="https://conscherry.com/help" rel="noopener">Help</a>
+        <button class="icon-btn" id="theme-cycle" type="button" aria-label="Change theme" title="Change theme"></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app" class="wrap" tabindex="-1">
+    <div class="loading" aria-hidden="true">
+      <div class="skeleton" style="height:2rem;width:16rem;border-radius:.5rem"></div>
+      <div class="skeleton" style="height:5.5rem;border-radius:.75rem;margin-top:2rem"></div>
+      <div class="skeleton" style="height:5.5rem;border-radius:.75rem;margin-top:.6rem"></div>
+      <div class="skeleton" style="height:5.5rem;border-radius:.75rem;margin-top:.6rem"></div>
+    </div>
+    <noscript>
+      <p class="notice">This page needs JavaScript to show live status. You can also check <a
+          href="https://github.com/conscherry/status">the status repository</a>.</p>
+    </noscript>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <div class="footer-bottom">
+        <p>&copy; 2020 - <span id="year"></span> Conscherry. All rights reserved.</p>
+        <p>Maintained by Xavier Garcia &bull; Powered by <a href="https://upptime.js.org" rel="noopener">Upptime</a>
+          &bull; <a href="https://github.com/conscherry/status" rel="noopener">View source</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <div id="tip" class="tip" role="tooltip" hidden></div>
+  <script src="app.js" defer></script>
+</body>
+
+</html>
