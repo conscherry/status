@@ -1,0 +1,39 @@
+name: Discord notifications
+
+on:
+  workflow_run:
+    workflows: ["Uptime CI"]
+    types: [completed]
+  issues:
+    types: [opened, closed, reopened, edited]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: discord-notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    name: Sync incidents to Discord
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion != 'cancelled' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: scripts
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Post and update incident messages
+        run: node scripts/discord-notify.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT || github.token }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_STATUS_WEBHOOK_URL }}
+          DISCORD_ROLE_ID: ${{ vars.DISCORD_ALERT_ROLE_ID }}
+          STATUS_URL: https://status.conscherry.com

@@ -20,7 +20,17 @@ for (const file of await readdir("history")) {
   if (!file.endsWith(".yml")) continue;
   const text = await readFile(`history/${file}`, "utf8");
   const start = /^startTime:\s*(.+)$/m.exec(text);
-  if (start) meta[file.replace(/\.yml$/, "")] = { startTime: start[1].trim() };
+  if (start) {
+    const code = /^code:\s*(\d+)/m.exec(text);
+    const status = /^status:\s*(\w+)/m.exec(text);
+    const updated = /^lastUpdated:\s*(.+)$/m.exec(text);
+    meta[file.replace(/\.yml$/, "")] = {
+      startTime: start[1].trim(),
+      code: code ? Number(code[1]) : null,
+      status: status ? status[1] : null,
+      lastUpdated: updated ? updated[1].trim() : null,
+    };
+  }
 }
 await writeFile(`${out}/data/meta.json`, JSON.stringify(meta));
 
@@ -98,7 +108,9 @@ for (const site of summary) {
     })
     .filter(Boolean)
     .sort((a, b) => a[0] - b[0]);
+  const lastPoint = points[points.length - 1];
   sites[site.slug] = {
+    last: lastPoint ? { t: lastPoint[0], ms: lastPoint[1], down: lastPoint[1] == null } : null,
     h24: points.filter(([t]) => t >= nowSec - 86400),
     d7: bucket(points.filter(([t]) => t >= nowSec - 7 * 86400), 3600),
     d90: bucket(points, 86400),
@@ -159,7 +171,7 @@ function icsDate(d) {
 function icsEscape(s) {
   return String(s || "")
     .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\;")
+    .replace(/;/g, "\\;")
     .replace(/,/g, "\\,")
     .replace(/\r?\n/g, "\\n");
 }
@@ -188,7 +200,40 @@ const events = incidents
   })
   .filter(Boolean);
 
-await writeFile(
-  `${out}/data/maintenance.ics`,
-  ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Conscherry//Status//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Conscherry maintenance", ...events, "END:VCALENDAR", ""].join("\r\n"),
-);
+function fold(line) {
+  const bytes = Buffer.from(line, "utf8");
+  if (bytes.length <= 74) return line;
+  const parts = [];
+  let cur = "";
+  let size = 0;
+  for (const ch of line) {
+    const n = Buffer.byteLength(ch);
+    if (size + n > (parts.length ? 73 : 74)) {
+      parts.push(cur);
+      cur = "";
+      size = 0;
+    }
+    cur += ch;
+    size += n;
+  }
+  parts.push(cur);
+  return parts.join("\r\n ");
+}
+
+const calendar = [
+  "BEGIN:VCALENDAR",
+  "VERSION:2.0",
+  "PRODID:-//Conscherry//Status//EN",
+  "CALSCALE:GREGORIAN",
+  "METHOD:PUBLISH",
+  "X-WR-CALNAME:Conscherry maintenance",
+  "X-WR-CALDESC:Planned maintenance for Conscherry services",
+  "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
+  "X-PUBLISHED-TTL:PT1H",
+  ...events.flatMap((e) => e.split("\r\n")),
+  "END:VCALENDAR",
+]
+  .map(fold)
+  .join("\r\n");
+
+await writeFile(`${out}/data/maintenance.ics`, calendar + "\r\n");

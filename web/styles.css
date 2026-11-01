@@ -419,6 +419,37 @@ main.wrap {
   font-size: 0.75rem;
 }
 
+.popover-link {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.popover-back {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.7rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.popover-back svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
 .popover-link:hover {
   background: var(--surface-2);
 }
@@ -1404,4 +1435,20 @@ main.wrap {
   body::before {
     animation: none;
   }
+}
+
+.chart .band {
+  fill: var(--bad);
+  opacity: 0.14;
+}
+
+.band-key {
+  background: color-mix(in srgb, var(--bad) 25%, transparent);
+  border: 1px solid var(--bad);
+}
+
+.chart-note {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.75rem;
 }

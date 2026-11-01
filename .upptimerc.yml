@@ -7,7 +7,6 @@ assignees:
 secrets:
   - KINDBOT_API_URL
   - PROJECT_HOST_URL
-  - NOTIFICATION_DISCORD_WEBHOOK_URL
 
 sites:
   - name: API Services
@@ -47,12 +46,15 @@ sites:
   - name: Helpdesk
     url: https://helpdesk.conscherry.com/
     maxResponseTime: 4000
-  - name: Indenti Project
+  - name: Indenti Platform
     url: https://indenti.net
     maxResponseTime: 3000
-  - name: KindBot Health
+  - name: Indenti Portal
+    url: https://portal.indenti.net
+    maxResponseTime: 3000
+  - name: KindBot Project
     url: $KINDBOT_API_URL
-    icon: https://conscherry.com/projects/KindBot.webp
+    icon: https://conscherry.com/projects/kindbot-icon.png
     __dangerous__body_down_if_text_missing: '"ok":true'
     maxResponseTime: 2000
   - name: Labs API Services
@@ -75,6 +77,10 @@ sites:
     location: asia
     slug: labs-project-as
     maxResponseTime: 4500
+  - name: Launcher Project
+    url: https://conscherry.com/api/launcher/status
+    icon: https://conscherry.com/branding/launcher-icon.png
+    maxResponseTime: 2000
   - name: Project Host
     url: $PROJECT_HOST_URL
     icon: https://conscherry.com/branding/Conscherry_Logo.png

@@ -15,7 +15,8 @@
 
   var GROUPS = [
     { name: "Conscherry", slugs: ["conscherry", "api-services", "conscherry-dashboard", "helpdesk"] },
-    { name: "Projects", slugs: ["labs-project", "labs-api-services", "kind-bot-health", "the-gobble-project", "indenti-project"] },
+    { name: "Projects", slugs: ["launcher-project", "labs-project", "labs-api-services", "kindbot-project", "kind-bot-health", "the-gobble-project"] },
+    { name: "Indenti", slugs: ["indenti-platform", "indenti-portal", "indenti-project"] },
     { name: "Infrastructure", slugs: ["project-host"] }
   ];
 
@@ -31,7 +32,7 @@
   var app = document.getElementById("app");
   var tip = document.getElementById("tip");
   var state = {
-    summary: null, meta: {}, config: {}, series: null, seriesAt: 0, incidents: null, incidentsFailed: false,
+    summary: null, launcher: null, meta: {}, config: {}, series: null, seriesAt: 0, incidents: null, incidentsFailed: false,
     fetchedAt: null, historyShown: PAGE_SIZE, comments: {}, range: {}, model: null, loading: false,
     cal: null, openSvc: {}, openInc: {}, logo: null
   };
@@ -126,13 +127,22 @@
     return site.status === "down" ? "bad" : site.status === "degraded" ? "warn" : "ok";
   }
 
+  function isBlocked(site) {
+    var m = state.meta[site.slug] || {};
+    return site.status === "down" && (m.code === 403 || m.code === 1020);
+  }
+
   function parentState(p) {
     var regs = state.model.regs[p.name] || [];
     if (p.status === "down") return { s: "bad", flag: "Outage" };
     if (p.status === "degraded") return { s: "warn", flag: "Degraded" };
     var bad = regs.filter(function (r) { return r.site.status === "down"; });
     var slow = regs.filter(function (r) { return r.site.status === "degraded"; });
-    if (bad.length) return { s: "warn", flag: "Down in " + bad.map(function (r) { return r.label; }).join(", "), regional: bad.map(function (r) { return r.label; }) };
+    if (bad.length) {
+      var names = bad.map(function (r) { return r.label; }).join(", ");
+      var blocked = bad.every(function (r) { return isBlocked(r.site); });
+      return { s: "warn", flag: (blocked ? "Blocked in " : "Down in ") + names, regional: bad.map(function (r) { return r.label; }) };
+    }
     if (slow.length) return { s: "warn", flag: "Slow in " + slow.map(function (r) { return r.label; }).join(", ") };
     return { s: "ok", flag: "" };
   }
@@ -346,10 +356,39 @@
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
 
+  var RANGE_NAMES = { "24h": "24 hours", "7d": "7 days", "90d": "90 days" };
+
+  function plottable(slug, range) {
+    var n = 0;
+    chartItems(slug).forEach(function (it) {
+      (seriesRange(it.slug, range) || []).forEach(function (p) { if (p[1] != null) n++; });
+    });
+    return n;
+  }
+
+  function pickRange(slug, wanted) {
+    if (plottable(slug, wanted) >= 2) return { range: wanted, note: "" };
+    var order = ["24h", "7d", "90d"];
+    var at = order.indexOf(wanted);
+    var tries = order.slice(at + 1).concat(order.slice(0, at).reverse());
+    for (var i = 0; i < tries.length; i++) {
+      if (plottable(slug, tries[i]) >= 2) {
+        return { range: tries[i], note: "No successful checks in the last " + RANGE_NAMES[wanted] + ". Showing the last " + RANGE_NAMES[tries[i]] + "." };
+      }
+    }
+    return { range: wanted, note: "" };
+  }
+
+  function lastKnown(slug) {
+    var s = state.series && state.series.sites && state.series.sites[slug];
+    return s && s.last ? s.last : null;
+  }
+
   function renderChart(slug) {
     var box = app.querySelector('.svc[data-slug="' + slug + '"] .chart-wrap');
     if (!box) return;
-    var range = state.range[slug] || "24h";
+    var picked = pickRange(slug, state.range[slug] || "24h");
+    var range = picked.range;
     box.querySelectorAll("[data-range]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-range") === range)); });
     var items = chartItems(slug).map(function (it) {
       it.pts = seriesRange(it.slug, range) || [];
@@ -368,7 +407,11 @@
       });
     });
     if (all.length < 2) {
-      chart.innerHTML = '<p class="chart-empty">Not enough data for this range yet.</p>';
+      var last = lastKnown(slug);
+      var msg = "There are no successful checks to plot yet.";
+      if (last && last.down) msg = "This service has been failing its checks, so there are no response times to plot. Last check " + fmtUtc(new Date(last.t * 1000).toISOString()) + ".";
+      else if (last && last.ms != null) msg = "Only one check has been recorded so far. Last response " + last.ms + " ms at " + fmtUtc(new Date(last.t * 1000).toISOString()) + ".";
+      chart.innerHTML = '<p class="chart-empty">' + esc(msg) + "</p>";
       foot.innerHTML = "";
       chart._data = null;
       return;
@@ -390,6 +433,23 @@
       var ty = Y(threshold);
       out += '<line class="th" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + ty + '" y2="' + ty + '"/><text class="ax ax-warn" x="' + (W - pr - 2) + '" y="' + (ty - 4) + '" text-anchor="end">degraded above ' + threshold + " ms</text>";
     }
+    var step = range === "7d" ? 3600 : range === "90d" ? 86400 : (function () {
+      var ds = [];
+      items[0].pts.forEach(function (p, i) { if (i) ds.push(p[0] - items[0].pts[i - 1][0]); });
+      ds.sort(function (a, b) { return a - b; });
+      return ds.length ? ds[Math.floor(ds.length / 2)] : 300;
+    })();
+    var anyDown = false;
+    items.forEach(function (it) {
+      it.pts.forEach(function (p, i) {
+        if (p[1] != null) return;
+        anyDown = true;
+        var from = X(p[0]);
+        var nextT = it.pts[i + 1] ? it.pts[i + 1][0] : p[0] + step;
+        var to = Math.max(from + 2, X(Math.min(nextT, p[0] + step * 1.5)));
+        out += '<rect class="band" x="' + from.toFixed(1) + '" y="' + pt + '" width="' + (to - from).toFixed(1) + '" height="' + (H - pt - pb) + '"/>';
+      });
+    });
     items.forEach(function (it, idx) {
       var d = "";
       var pen = false;
@@ -417,7 +477,9 @@
     if (vals.length) {
       stats = "<span>Average <strong>" + Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length) + " ms</strong></span><span>Fastest <strong>" + Math.min.apply(null, vals) + " ms</strong></span><span>Slowest <strong>" + Math.max.apply(null, vals) + " ms</strong></span>";
     }
-    foot.innerHTML = legend + stats;
+    var downKey = anyDown ? '<span class="key"><i class="band-key"></i>Check failed</span>' : "";
+    var noteHtml = picked.note ? '<span class="chart-note">' + esc(picked.note) + "</span>" : "";
+    foot.innerHTML = noteHtml + legend + downKey + stats;
   }
 
   function chartHover(chart, clientX) {
@@ -476,20 +538,26 @@
       regionHtml = '<div class="sub">Checked from</div><div class="regions">' + [{ label: "United States", site: p }].concat(regs).map(function (x) {
         var s = siteState(x.site);
         var u = pctNum(x.site.uptimeDay);
-        return '<div class="region"><span>' + esc(x.label) + '</span><span class="st" data-s="' + s + '">' + STATE_LABEL[s] + '</span><span class="num">' + fmtPct(u) + ' today</span><span class="num">' + (x.site.timeDay ? x.site.timeDay + " ms" : "n/a") + "</span></div>";
+        return '<div class="region"><span>' + esc(x.label) + '</span><span class="st" data-s="' + s + '">' + (isBlocked(x.site) ? "Blocked (403)" : STATE_LABEL[s]) + '</span><span class="num">' + fmtPct(u) + ' today</span><span class="num">' + (x.site.timeDay ? x.site.timeDay + " ms" : "n/a") + "</span></div>";
       }).join("") + "</div>";
     }
     var hasSeries = seriesRange(p.slug, "24h") || seriesRange(p.slug, "7d") || seriesRange(p.slug, "90d");
     var chart = hasSeries ? '<div class="chart-wrap"><div class="chart-top"><div class="sub">Response time</div><div class="range" role="group" aria-label="Range"><button type="button" data-range="24h" aria-pressed="true">24h</button><button type="button" data-range="7d" aria-pressed="false">7d</button><button type="button" data-range="90d" aria-pressed="false">90d</button></div></div><div class="chart"></div><div class="chart-foot"></div></div>' : "";
     var cfg = state.config[p.slug] || {};
     var up2 = function (v) { return fmtPct(pctNum(v)); };
+    var launcherHtml = "";
+    if (p.slug === "launcher-project" && state.launcher && state.launcher.launchers) {
+      var L = state.launcher;
+      var rate = L.requests && L.requests.failureRate != null ? Math.round((1 - L.requests.failureRate) * 1000) / 10 + "%" : "n/a";
+      launcherHtml = '<div class="sub">Launcher right now</div><dl class="facts"><div class="fact"><dt>Launchers online</dt><dd>' + esc(L.launchers.onlineNow) + '</dd></div><div class="fact"><dt>Latest version</dt><dd>' + esc(L.latestRelease ? "v" + L.latestRelease.version : "n/a") + '</dd></div><div class="fact"><dt>Requests succeeding</dt><dd>' + esc(rate) + '</dd></div><div class="fact"><dt>Database</dt><dd>' + (L.database && L.database.ok ? esc(L.database.latencyMs) + " ms" : "Down") + "</dd></div></dl>";
+    }
     var facts = '<div class="sub">Uptime</div><dl class="facts"><div class="fact"><dt>Last 24 hours</dt><dd>' + up2(p.uptimeDay) + '</dd></div><div class="fact"><dt>Last 7 days</dt><dd>' + up2(p.uptimeWeek) + '</dd></div><div class="fact"><dt>Last 30 days</dt><dd>' + up2(p.uptimeMonth) + '</dd></div><div class="fact"><dt>Last year</dt><dd>' + up2(p.uptimeYear) + "</dd></div></dl>";
     return '<article class="svc" data-slug="' + esc(p.slug) + '" data-s="' + ps.s + '">' +
       '<button class="svc-head" type="button" aria-expanded="' + open + '" aria-controls="b-' + esc(p.slug) + '">' + svg("chev", "chev") +
       '<span class="svc-name">' + esc(p.name) + "</span>" + (ps.flag ? '<span class="svc-flag">' + esc(ps.flag) + "</span>" : "") +
       '<span class="svc-up">' + (up == null ? "No data" : fmtPct(up) + " uptime") + "</span></button>" +
       '<div class="svc-bar">' + barHtml(days) + '<div class="bar-labels"><span>90 days ago</span><span>Today</span></div></div>' +
-      '<div class="svc-body" id="b-' + esc(p.slug) + '"' + (open ? "" : " hidden") + ">" + months + regionHtml + chart + facts +
+      '<div class="svc-body" id="b-' + esc(p.slug) + '"' + (open ? "" : " hidden") + ">" + months + regionHtml + launcherHtml + chart + facts +
       (cfg.maxResponseTime ? '<p class="note">Counted as degraded when a response takes longer than ' + cfg.maxResponseTime + " ms.</p>" : "") + "</div></article>";
   }
 
@@ -612,16 +680,76 @@
     app.innerHTML = html + "</div>";
   }
 
-  function feedUrl(proto) {
-    return proto + "//" + location.host + location.pathname.replace(/[^/]*$/, "") + "data/maintenance.ics";
+  var FEED_HOST = "status.conscherry.com";
+  var FEED_PATH = "/data/maintenance.ics";
+
+  function feedLinks() {
+    var https = "https://" + FEED_HOST + FEED_PATH;
+    var web = "webcal://" + FEED_HOST + FEED_PATH;
+    return {
+      https: https,
+      web: web,
+      google: "https://calendar.google.com/calendar/r?cid=" + encodeURIComponent(web),
+      outlook: "https://outlook.live.com/calendar/0/addfromweb?url=" + encodeURIComponent(https) + "&name=" + encodeURIComponent("Conscherry maintenance")
+    };
+  }
+
+  function menuMain() {
+    return '<a class="popover-link" href="https://conscherry.com/discord" rel="noopener"><strong>Discord</strong><span>Incident posts in our community server</span></a>' +
+      '<a class="popover-link" href="https://github.com/' + REPO + '" rel="noopener"><strong>GitHub</strong><span>Watch the repository for email updates</span></a>' +
+      '<button class="popover-link" type="button" data-menu="calendar"><strong>Maintenance calendar</strong><span>Add planned work to your calendar app</span></button>';
+  }
+
+  function menuCalendar() {
+    var f = feedLinks();
+    return '<button class="popover-back" type="button" data-menu="main">' + svg("chev", "rot-l") + 'Back</button>' +
+      '<a class="popover-link" href="' + esc(f.google) + '" target="_blank" rel="noopener"><strong>Google Calendar</strong><span>Opens Google Calendar to confirm</span></a>' +
+      '<a class="popover-link" href="' + esc(f.outlook) + '" target="_blank" rel="noopener"><strong>Outlook</strong><span>Outlook.com, Microsoft 365</span></a>' +
+      '<a class="popover-link" href="' + esc(f.web) + '"><strong>Apple Calendar and others</strong><span>Opens your default calendar app</span></a>' +
+      '<button class="popover-link" type="button" data-menu="copy"><strong>Copy feed link</strong><span>Paste into any app that supports calendar URLs</span></button>';
   }
 
   function subscribeMenu(id, cls, label) {
-    return '<details class="popover' + (cls ? " " + cls : "") + '" id="' + id + '"><summary class="btn' + (cls ? " btn-primary" : "") + '">' + (cls ? svg("cal") : "") + label + '</summary><div class="popover-panel">' +
-      '<a class="popover-link" href="https://conscherry.com/discord" rel="noopener"><strong>Discord</strong><span>Incident posts in our community server</span></a>' +
-      '<a class="popover-link" href="https://github.com/' + REPO + '" rel="noopener"><strong>GitHub</strong><span>Watch the repository for email updates</span></a>' +
-      '<a class="popover-link" href="' + esc(feedUrl("webcal:")) + '"><strong>Maintenance calendar</strong><span>Add planned work to your calendar app</span></a></div></details>';
+    return '<details class="popover' + (cls ? " " + cls : "") + '" id="' + id + '"><summary class="btn' + (cls ? " btn-primary" : "") + '">' + (cls ? svg("cal") : "") + label + '</summary><div class="popover-panel">' + menuMain() + "</div></details>";
   }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      ta.remove();
+      if (ok) resolve(); else reject(new Error("copy"));
+    });
+  }
+
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-menu]");
+    if (!b) return;
+    var panel = b.closest(".popover-panel");
+    var kind = b.getAttribute("data-menu");
+    if (kind === "calendar") panel.innerHTML = menuCalendar();
+    else if (kind === "main") panel.innerHTML = menuMain();
+    else if (kind === "copy") {
+      var label = b.querySelector("strong");
+      copyText(feedLinks().https).then(function () { label.textContent = "Copied"; }, function () { label.textContent = feedLinks().https; }).then(function () {
+        setTimeout(function () { if (label.isConnected) label.textContent = "Copy feed link"; }, 2000);
+      });
+    }
+  });
+
+  document.addEventListener("toggle", function (e) {
+    if (e.target.classList && e.target.classList.contains("popover") && !e.target.open) {
+      var panel = e.target.querySelector(".popover-panel");
+      if (panel) panel.innerHTML = menuMain();
+    }
+  }, true);
 
   function sameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
 
@@ -734,6 +862,7 @@
     if (!state.seriesAt || Date.now() - state.seriesAt > SERIES_MS) {
       tasks.push(getJson("data/response.json").then(function (r) { state.series = r; state.seriesAt = Date.now(); }).catch(function () { state.seriesAt = Date.now(); }));
     }
+    tasks.push(getJson("https://conscherry.com/api/launcher/status", 5000).then(function (l) { state.launcher = l; }).catch(function () { state.launcher = null; }));
     tasks.push(getJson([API + "/issues?state=all&per_page=100&sort=created&direction=desc", "data/incidents.json"]).then(function (i) {
       state.incidents = i;
       state.incidentsFailed = false;
