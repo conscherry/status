@@ -46,6 +46,9 @@ sites:
   - name: Helpdesk
     url: https://helpdesk.conscherry.com/
     maxResponseTime: 4000
+  - name: Hub Platform
+    url: https://hub.conscherry.com
+    maxResponseTime: 3000
   - name: Indenti Platform
     url: https://indenti.net
     maxResponseTime: 3000
