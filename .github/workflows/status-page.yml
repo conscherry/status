@@ -1,4 +1,5 @@
 name: Status Page
+
 on:
   push:
     branches: [master]
@@ -6,23 +7,29 @@ on:
       - "web/**"
       - "scripts/build-site.mjs"
       - "assets/logo.png"
+      - ".upptimerc.yml"
       - ".github/workflows/status-page.yml"
-  workflow_run:
-    workflows: ["Static Site CI"]
-    types: [completed]
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
-concurrency:
-  group: ${{ github.repository }}-status-page
-  cancel-in-progress: false
+
 permissions:
-  contents: write
+  contents: read
   issues: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: status-page-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Build and deploy status page
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,12 +41,10 @@ jobs:
       - name: Build site
         run: node scripts/build-site.mjs
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT || github.token }}
-      - uses: peaceiris/actions-gh-pages@v4
+          GITHUB_TOKEN: ${{ github.token }}
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GH_PAT || github.token }}
-          publish_dir: dist
-          cname: status.conscherry.com
-          force_orphan: true
-          user_name: "github-actions[bot]"
-          user_email: "41898282+github-actions[bot]@users.noreply.github.com"
+          path: dist
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -51,9 +51,11 @@ sites:
     maxResponseTime: 3000
   - name: Indenti Platform
     url: https://indenti.net
+    icon: https://conscherry.com/projects/indenti-logo-neutral.png
     maxResponseTime: 3000
   - name: Indenti Portal
     url: https://portal.indenti.net
+    icon: https://conscherry.com/projects/indenti-logo-neutral.png
     maxResponseTime: 3000
   - name: KindBot Project
     url: $KINDBOT_API_URL
@@ -82,7 +84,7 @@ sites:
     maxResponseTime: 4500
   - name: Launcher Project
     url: https://conscherry.com/api/launcher/status
-    icon: https://conscherry.com/branding/launcher-icon.png
+    icon: https://conscherry.com/projects/launcher-icon.png
     maxResponseTime: 2000
   - name: Project Host
     url: $PROJECT_HOST_URL
