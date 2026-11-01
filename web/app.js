@@ -13,13 +13,6 @@
   var STATE_LABEL = { ok: "Operational", warn: "Degraded", bad: "Outage" };
   var BADGE_COLOR = { ok: "#38c65c", warn: "#f5a524", bad: "#ff5750" };
 
-  var GROUPS = [
-    { name: "Conscherry", slugs: ["conscherry", "api-services", "conscherry-dashboard", "helpdesk"] },
-    { name: "Projects", slugs: ["launcher-project", "labs-project", "labs-api-services", "kindbot-project", "kind-bot-health", "the-gobble-project"] },
-    { name: "Indenti", slugs: ["indenti-platform", "indenti-portal", "indenti-project"] },
-    { name: "Infrastructure", slugs: ["project-host"] }
-  ];
-
   var ICONS = {
     chev: '<path d="M6 9l6 6 6-6"/>',
     ext: '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
@@ -32,7 +25,7 @@
   var app = document.getElementById("app");
   var tip = document.getElementById("tip");
   var state = {
-    summary: null, launcher: null, meta: {}, config: {}, series: null, seriesAt: 0, incidents: null, incidentsFailed: false,
+    summary: null, groups: null, launcher: null, meta: {}, config: {}, series: null, seriesAt: 0, incidents: null, incidentsFailed: false,
     fetchedAt: null, historyShown: PAGE_SIZE, comments: {}, range: {}, model: null, loading: false,
     cal: null, openSvc: {}, openInc: {}, logo: null
   };
@@ -607,6 +600,11 @@
       "</div></article>";
   }
 
+  function groupList() {
+    if (state.groups) return state.groups;
+    return [{ name: "Services", services: state.model.parents.map(function (p) { return p.slug; }) }];
+  }
+
   function renderOverview() {
     var M = state.model;
     var ov = overall();
@@ -625,8 +623,8 @@
     }
 
     var used = {};
-    GROUPS.forEach(function (g) {
-      var sites = g.slugs.map(function (slug) { return M.parents.filter(function (s) { return s.slug === slug; })[0]; }).filter(Boolean);
+    groupList().forEach(function (g) {
+      var sites = (g.services || g.slugs || []).map(function (key) { return M.parents.filter(function (s) { return s.slug === key || s.name === key; })[0]; }).filter(Boolean);
       sites.forEach(function (s) { used[s.slug] = true; });
       if (sites.length) html += '<h2 class="group-title">' + esc(g.name) + '</h2><div class="rows">' + sites.map(serviceRow).join("") + "</div>";
     });
@@ -857,6 +855,7 @@
     var tasks = [getJson([RAW, "data/summary.json"]).then(function (s) { state.summary = s; state.fetchedAt = Date.now(); })];
     if (initial) {
       tasks.push(getJson("data/meta.json").then(function (m) { state.meta = m; }).catch(function () {}));
+      tasks.push(getJson("groups.json").then(function (g) { if (Array.isArray(g) && g.length) state.groups = g; }).catch(function () {}));
       tasks.push(getJson("data/config.json").then(function (c) { state.config = c; }).catch(function () {}));
     }
     if (!state.seriesAt || Date.now() - state.seriesAt > SERIES_MS) {

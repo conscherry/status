@@ -69,6 +69,25 @@ for (const site of parseSites(await readFile(".upptimerc.yml", "utf8"))) {
 }
 await writeFile(`${out}/data/config.json`, JSON.stringify(config));
 
+try {
+  const groups = JSON.parse(await readFile("web/groups.json", "utf8"));
+  const parents = new Map(summary.filter((s) => !/ \([^)]+\)$/.test(s.name) || !summary.some((p) => p.name === s.name.replace(/ \([^)]+\)$/, ""))).map((s) => [s.name, s]));
+  const listed = new Set();
+  for (const group of groups) {
+    for (const key of group.services || []) {
+      const hit = [...parents.values()].find((s) => s.name === key || s.slug === key);
+      if (!hit) console.warn(`::warning file=web/groups.json::"${key}" in "${group.name}" does not match any monitored service`);
+      else if (listed.has(hit.slug)) console.warn(`::warning file=web/groups.json::"${hit.name}" is listed in more than one group`);
+      else listed.add(hit.slug);
+    }
+  }
+  for (const s of parents.values()) {
+    if (!listed.has(s.slug)) console.warn(`::warning file=web/groups.json::"${s.name}" is not in any group and will show under Other`);
+  }
+} catch (error) {
+  console.warn(`::warning::groups.json check skipped: ${error.message}`);
+}
+
 function commitLog(slug) {
   try {
     return execFileSync("git", ["log", "--since=90 days ago", "--format=%ct%x09%s", "--", `history/${slug}.yml`], {
