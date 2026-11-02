@@ -323,11 +323,11 @@
     "icon": "https://icons.duckduckgo.com/ip3/null.ico",
     "slug": "moneta-project",
     "status": "down",
-    "uptime": "25.39%",
-    "uptimeDay": "25.39%",
-    "uptimeWeek": "25.39%",
-    "uptimeMonth": "25.39%",
-    "uptimeYear": "25.39%",
+    "uptime": "18.70%",
+    "uptimeDay": "18.70%",
+    "uptimeWeek": "18.70%",
+    "uptimeMonth": "18.70%",
+    "uptimeYear": "18.70%",
     "time": 0,
     "timeDay": 0,
     "timeWeek": 0,
@@ -397,18 +397,18 @@
     "icon": "https://conscherry.com/branding/Conscherry_Logo.png",
     "slug": "vps-monitor",
     "status": "down",
-    "uptime": "36.28%",
-    "uptimeDay": "36.28%",
-    "uptimeWeek": "36.28%",
-    "uptimeMonth": "36.28%",
-    "uptimeYear": "36.28%",
+    "uptime": "22.94%",
+    "uptimeDay": "22.94%",
+    "uptimeWeek": "22.94%",
+    "uptimeMonth": "22.94%",
+    "uptimeYear": "22.94%",
     "time": 0,
     "timeDay": 0,
     "timeWeek": 0,
     "timeMonth": 0,
     "timeYear": 0,
     "dailyMinutesDown": {
-      "2026-11-02": 0
+      "2026-11-02": 1
     }
   }
 ]
