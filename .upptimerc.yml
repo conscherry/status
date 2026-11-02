@@ -6,7 +6,9 @@ assignees:
 
 secrets:
   - KINDBOT_API_URL
+  - MONETA_API_URL
   - PROJECT_HOST_URL
+  - VPS_MONITOR_URL
 
 sites:
   - name: API Services
@@ -86,9 +88,8 @@ sites:
     url: https://conscherry.com/api/launcher/status
     icon: https://conscherry.com/projects/launcher-icon.png
     maxResponseTime: 2000
-  - name: Project Host
-    url: $PROJECT_HOST_URL
-    icon: https://conscherry.com/branding/Conscherry_Logo.png
+  - name: Moneta Project
+    url: $MONETA_API_URL
     __dangerous__body_down_if_text_missing: '"ok":true'
     maxResponseTime: 2000
   - name: The Gobble Project
@@ -106,6 +107,11 @@ sites:
     location: asia
     slug: the-gobble-project-as
     maxResponseTime: 4500
+  - name: VPS Monitor
+    url: $VPS_MONITOR_URL
+    icon: https://conscherry.com/branding/Conscherry_Logo.png
+    __dangerous__body_down_if_text_missing: '"ok":true'
+    maxResponseTime: 2000
 
 status-website:
   cname: status.conscherry.com

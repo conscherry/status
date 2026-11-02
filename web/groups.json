@@ -18,13 +18,14 @@
       "Labs Project",
       "Labs API Services",
       "Launcher Project",
+      "Moneta Project",
       "The Gobble Project"
     ]
   },
   {
     "name": "Infrastructure",
     "services": [
-      "Project Host"
+      "VPS Monitor"
     ]
   }
 ]
