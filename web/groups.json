@@ -4,10 +4,10 @@
     "services": [
       "Conscherry",
       "API Services",
-      "REST API",
       "Conscherry Dashboard",
       "Helpdesk",
-      "Hub Platform"
+      "Hub Platform",
+      "REST API"
     ]
   },
   {
