@@ -11,29 +11,30 @@ secrets:
   - PROJECT_HOST_URL
   - VPS_MONITOR_URL
   - LAUNCHER_API_URL
-  - API_SERVICES_URL
   - LABS_API_URL
   - REST_API_URL
 
 sites:
   - name: API Services
-    url: $API_SERVICES_URL
+    url: https://conscherry.com/api/health
+    __dangerous__body_down_if_text_missing: '"status":"ok"'
     maxResponseTime: 4500
   - name: API Services (Europe)
-    url: $API_SERVICES_URL
+    url: https://conscherry.com/api/health
+    __dangerous__body_down_if_text_missing: '"status":"ok"'
     type: globalping
     location: europe
     slug: api-services-eu
     maxResponseTime: 4500
   - name: API Services (Asia)
-    url: $API_SERVICES_URL
+    url: https://conscherry.com/api/health
+    __dangerous__body_down_if_text_missing: '"status":"ok"'
     type: globalping
     location: asia
     slug: api-services-as
     maxResponseTime: 4500
   - name: REST API
-    url: $REST_API_URL
-    icon: https://conscherry.com/branding/Conscherry_Logo.png
+    url: https://api.conscherry.com/health
     __dangerous__body_down_if_text_missing: '"status":"healthy"'
     maxResponseTime: 4500
   - name: Conscherry
@@ -51,7 +52,7 @@ sites:
     location: asia
     slug: conscherry-as
     maxResponseTime: 4500
-  - name: Conscherry Dashboard
+  - name: Dashboard
     url: https://dashboard.conscherry.com
     maxResponseTime: 4500
   - name: Helpdesk

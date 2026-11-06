@@ -3,11 +3,9 @@
     "name": "Conscherry",
     "services": [
       "Conscherry",
-      "API Services",
-      "Conscherry Dashboard",
+      "Dashboard",
       "Helpdesk",
-      "Hub Platform",
-      "REST API"
+      "Hub Platform"
     ]
   },
   {
@@ -27,6 +25,8 @@
   {
     "name": "Infrastructure",
     "services": [
+      "API Services",
+      "REST API",
       "VPS Monitor"
     ]
   }
