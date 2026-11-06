@@ -10,20 +10,23 @@ secrets:
   - LABS_BOT_API_URL
   - PROJECT_HOST_URL
   - VPS_MONITOR_URL
+  - LAUNCHER_API_URL
+  - API_SERVICES_URL
+  - LABS_API_URL
 
 sites:
   - name: API Services
-    url: https://conscherry.com/api/health
+    url: $API_SERVICES_URL
     __dangerous__body_down_if_text_missing: '"status":"ok"'
     maxResponseTime: 4500
   - name: API Services (Europe)
-    url: https://conscherry.com/api/health
+    url: $API_SERVICES_URL
     type: globalping
     location: europe
     slug: api-services-eu
     maxResponseTime: 4500
   - name: API Services (Asia)
-    url: https://conscherry.com/api/health
+    url: $API_SERVICES_URL
     type: globalping
     location: asia
     slug: api-services-as
@@ -66,7 +69,7 @@ sites:
     __dangerous__body_down_if_text_missing: '"ok":true'
     maxResponseTime: 4500
   - name: Labs API Services
-    url: https://labs.conscherry.com/api/health
+    url: $LABS_API_URL
     icon: https://conscherry.com/projects/discordlabs.png
     maxResponseTime: 4500
   - name: Labs Bot
@@ -90,7 +93,7 @@ sites:
     slug: labs-project-as
     maxResponseTime: 4500
   - name: Launcher Project
-    url: https://conscherry.com/api/launcher/status
+    url: $LAUNCHER_API_URL
     icon: https://conscherry.com/projects/launcher-icon.png
     maxResponseTime: 4500
   - name: Moneta Project
