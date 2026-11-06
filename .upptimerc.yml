@@ -7,6 +7,7 @@ assignees:
 secrets:
   - KINDBOT_API_URL
   - MONETA_API_URL
+  - LABS_BOT_API_URL
   - PROJECT_HOST_URL
   - VPS_MONITOR_URL
 
@@ -66,6 +67,10 @@ sites:
     maxResponseTime: 4500
   - name: Labs API Services
     url: https://labs.conscherry.com/api/health
+    icon: https://conscherry.com/projects/discordlabs.png
+    maxResponseTime: 4500
+  - name: Labs Bot
+    url: $LABS_BOT_API_URL
     icon: https://conscherry.com/projects/discordlabs.png
     maxResponseTime: 4500
   - name: Labs Project
