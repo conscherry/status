@@ -1,7 +1,7 @@
-url: https://labs.conscherry.com/api/health
+url: $LABS_API_URL
 status: up
 code: 200
-responseTime: 330
-lastUpdated: 2026-11-06T04:39:55.502Z
+responseTime: 262
+lastUpdated: 2026-11-06T17:10:39.513Z
 startTime: 2026-08-24T00:25:00.943Z
 generator: Upptime <https://github.com/upptime/upptime>
