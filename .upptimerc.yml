@@ -125,7 +125,7 @@ sites:
   - name: VPS Monitor
     url: $VPS_MONITOR_URL
     icon: https://conscherry.com/branding/Conscherry_Logo.png
-    __dangerous__body_down_if_text_missing: '"ok":true'
+    # __dangerous__body_down_if_text_missing: '"ok":true'
     maxResponseTime: 4500
 
 status-website:
