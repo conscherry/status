@@ -1,7 +1,7 @@
 url: $VPS_MONITOR_URL
 status: down
 code: 503
-responseTime: 667
-lastUpdated: 2026-11-24T06:53:32.092Z
+responseTime: 671
+lastUpdated: 2026-11-25T05:20:57.873Z
 startTime: 2026-11-02T18:39:54.343Z
 generator: Upptime <https://github.com/upptime/upptime>
