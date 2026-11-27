@@ -1,17 +1,25 @@
 ---
 name: Maintenance Event
 about: Schedule a work window
-title: "[Scheduled Maintenance] Site down for Maintenance"
+title: "[Scheduled Maintenance] "
 labels: maintenance
 assignees: ''
 
 ---
 
 <!--
-start: 2021-08-24T13:00:00.220Z
-end: 2021-08-24T14:00:00.220Z
-expectedDown: google, hacker-news
+Use UTC timestamps in ISO 8601 format. List affected service slugs from .upptimerc.yml.
+start: YYYY-MM-DDTHH:MM:SSZ
+end: YYYY-MM-DDTHH:MM:SSZ
+expectedDown: api-services
+expectedDegraded:
 -->
 
-**Additional context**
-Who/what/when/where/why is this maintenance happening
+### Purpose and customer impact
+<!-- Explain what is changing and what customers may experience. -->
+
+### Services affected
+<!-- The expectedDown and expectedDegraded fields above determine which service cards show maintenance. -->
+
+### Rollback or mitigation
+<!-- Describe the fallback plan, if applicable. -->

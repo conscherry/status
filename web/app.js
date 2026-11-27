@@ -145,14 +145,44 @@
     var st = P.map(parentState);
     var down = st.filter(function (x) { return x.s === "bad"; }).length;
     var warn = st.filter(function (x) { return x.s === "warn"; }).length;
+    var active = incidentList().filter(function (i) { return i.open && !i.maintenance; });
+    var incidentDown = active.filter(function (i) { return !i.degraded && i.httpCode !== "403" && i.httpCode !== "1020"; }).length;
+    var incidentWarn = active.length - incidentDown;
     if (P.length && down === P.length) return { s: "bad", title: "Major outage", text: "All services are down" };
-    if (down) return { s: "bad", title: "Partial outage", text: down + (down === 1 ? " service is down" : " services are down") };
-    if (warn) return { s: "warn", title: "Degraded performance", text: warn + (warn === 1 ? " service is affected" : " services are affected") };
+    if (down || incidentDown) {
+      var downText = down
+        ? down + (down === 1 ? " service is down" : " services are down")
+        : incidentDown + (incidentDown === 1 ? " active outage incident" : " active outage incidents");
+      return { s: "bad", title: "Partial outage", text: downText };
+    }
+    if (warn || incidentWarn) {
+      var warnText = warn
+        ? warn + (warn === 1 ? " service is affected" : " services are affected")
+        : incidentWarn + (incidentWarn === 1 ? " active incident needs attention" : " active incidents need attention");
+      return { s: "warn", title: "Degraded performance", text: warnText };
+    }
+    var now = Date.now();
+    var maintenance = maintItems().filter(function (m) {
+      return m.inc.open && m.start.getTime() <= now && m.end.getTime() > now;
+    });
+    if (maintenance.length) {
+      var services = [];
+      maintenance.forEach(function (m) {
+        m.inc.services.forEach(function (name) { if (services.indexOf(name) === -1) services.push(name); });
+      });
+      return {
+        s: "warn",
+        title: "Scheduled maintenance",
+        text: services.length ? "Planned work in progress: " + services.join(", ") : "Planned work is in progress"
+      };
+    }
     return { s: "ok", title: "All systems operational", text: "" };
   }
 
   function issueCount() {
-    return state.model.parents.filter(function (p) { return parentState(p).s !== "ok"; }).length;
+    var affected = state.model.parents.filter(function (p) { return parentState(p).s !== "ok"; }).length;
+    var active = incidentList().filter(function (i) { return i.open && !i.maintenance; }).length;
+    return Math.max(affected, active);
   }
 
   function evalDay(site, ds, nowMs) {
@@ -210,6 +240,15 @@
     var slugMap = {};
     (state.summary || []).forEach(function (s) { slugMap[s.slug] = s; });
     var body = issue.body || "";
+    function section(title) {
+      var blocks = body.split(/^#{1,6}\s+/m);
+      for (var i = 1; i < blocks.length; i++) {
+        var newline = blocks[i].indexOf("\n");
+        if (newline < 0 || blocks[i].slice(0, newline).trim().toLowerCase() !== title.toLowerCase()) continue;
+        return blocks[i].slice(newline + 1).replace(/<!--[\s\S]*?-->/g, "").trim();
+      }
+      return "";
+    }
     var maintenance = labels.indexOf("maintenance") !== -1;
     var inc = {
       id: issue.number,
@@ -223,14 +262,25 @@
       degraded: /degraded/i.test(issue.title || ""),
       commentsUrl: issue.comments_url,
       commentsCount: issue.comments || 0,
-      snapshotComments: issue.snapshot_comments || null
+      snapshotComments: issue.snapshot_comments || null,
+      impact: section("Customer impact"),
+      cause: section("Cause / current findings"),
+      workaround: section("Workaround"),
+      nextUpdate: section("Next update")
     };
+    section("Affected services").split(/[,\s]+/).forEach(function (slug) {
+      if (slugMap[slug] && inc.services.indexOf(slugMap[slug].name) === -1) inc.services.push(slugMap[slug].name);
+    });
     if (maintenance) {
       var s = /start:\s*(\S+)/i.exec(body);
       var e = /end:\s*(\S+)/i.exec(body);
       inc.start = s ? s[1] : issue.created_at;
       inc.end = e ? e[1] : null;
-      inc.description = body.replace(/<!--[\s\S]*?-->/g, "").trim();
+      var details = ["Purpose and customer impact", "Services affected", "Rollback or mitigation"]
+        .map(section).filter(Boolean);
+      inc.description = details.length
+        ? details.join("\n\n")
+        : body.replace(/<!--[\s\S]*?-->/g, "").replace(/^#{1,6}\s+/gm, "").trim();
       [/expectedDown:\s*([^\n\r]+)/i.exec(body), /expectedDegraded:\s*([^\n\r]+)/i.exec(body)].forEach(function (m) {
         if (!m) return;
         m[1].split(",").forEach(function (x) {
@@ -267,6 +317,18 @@
     }).sort(function (a, b) { return a.start - b.start; });
   }
 
+  function activeMaintenance(site) {
+    var now = Date.now();
+    var names = [site.name];
+    var region = REGION_RE.exec(site.name);
+    if (region) names.push(region[1]);
+    else (state.model.regs[site.name] || []).forEach(function (r) { names.push(r.site.name); });
+    return maintItems().filter(function (m) {
+      return m.inc.open && m.inc.services.some(function (name) { return names.indexOf(name) !== -1; }) &&
+        m.start.getTime() <= now && m.end.getTime() > now;
+    });
+  }
+
   function isBot(c) {
     var u = c.user || {};
     return u.type === "Bot" || /upptime|bot/i.test(u.login || "");
@@ -278,14 +340,46 @@
     if (inc.maintenance) {
       items.push({ t: "info", label: "Scheduled", time: inc.created, text: "Planned maintenance from " + fmtUtc(inc.start) + (inc.end ? " to " + fmtUtc(inc.end) : "") + "." });
     } else {
-      var detail = [];
-      if (inc.httpCode) detail.push("HTTP " + inc.httpCode);
-      if (inc.responseTime) detail.push(inc.responseTime + " ms");
+      var code = inc.httpCode == null ? null : Number(inc.httpCode);
+      var detail;
+      if (inc.degraded) {
+        detail = who + " is responding slowly.";
+        if (code != null) detail += " The monitor received HTTP " + code + ".";
+      } else if (code === 0) {
+        detail = "No HTTP response was received; the check may have timed out or failed to connect.";
+      } else if (code === 401) {
+        detail = "The endpoint returned HTTP 401 (authentication required).";
+      } else if (code === 403) {
+        detail = "The endpoint returned HTTP 403 (access denied). A firewall or access rule may be blocking the monitor.";
+      } else if (code === 404) {
+        detail = "The endpoint returned HTTP 404 (not found). Check that the monitored URL or route still exists.";
+      } else if (code === 408 || code === 504) {
+        detail = "The request timed out (HTTP " + code + ").";
+      } else if (code === 429) {
+        detail = "The endpoint returned HTTP 429 (too many requests).";
+      } else if (code >= 500 && code <= 599) {
+        detail = "The endpoint returned HTTP " + code + " (server error).";
+      } else if (code >= 400 && code <= 499) {
+        detail = "The endpoint returned HTTP " + code + " (client error).";
+      } else if (code >= 200 && code <= 299) {
+        detail = "The endpoint returned HTTP " + code + ", but the health check did not pass.";
+      } else if (code >= 300 && code <= 399) {
+        detail = "The endpoint redirected the monitor (HTTP " + code + ").";
+      } else {
+        detail = who + " is not responding.";
+      }
+      if (code !== 0 && inc.responseTime && Number(inc.responseTime) > 0) detail += " Response time: " + inc.responseTime + " ms.";
+      if (!inc.cause) detail += " Root cause has not been confirmed.";
+      var context = [];
+      if (inc.impact) context.push("Customer impact: " + inc.impact);
+      if (inc.cause) context.push("Reported cause: " + inc.cause);
+      if (inc.workaround) context.push("Workaround: " + inc.workaround);
+      if (inc.nextUpdate) context.push("Next update: " + inc.nextUpdate);
       items.push({
         t: inc.degraded ? "warn" : "bad",
         label: "Investigating",
         time: inc.created,
-        text: who + (inc.degraded ? " is responding slowly" : " is not responding") + (detail.length ? " (" + detail.join(", ") + ")" : "") + ". Detected by automated monitoring."
+        text: detail + " Detected by automated monitoring." + (context.length ? "\n\n" + context.join("\n") : "")
       });
     }
     (comments || []).forEach(function (c) {
@@ -516,6 +610,12 @@
   function serviceRow(p) {
     var ps = parentState(p);
     var regs = state.model.regs[p.name] || [];
+    var maintenance = activeMaintenance(p);
+    regs.forEach(function (r) {
+      activeMaintenance(r.site).forEach(function (m) {
+        if (!maintenance.some(function (item) { return item.inc.id === m.inc.id; })) maintenance.push(m);
+      });
+    });
     var days = lastDays(p, DAYS);
     var up = sumUptime(days);
     var open = isOpen(p);
@@ -544,13 +644,19 @@
       var rate = L.requests && L.requests.failureRate != null ? Math.round((1 - L.requests.failureRate) * 1000) / 10 + "%" : "n/a";
       launcherHtml = '<div class="sub">Launcher right now</div><dl class="facts"><div class="fact"><dt>Launchers online</dt><dd>' + esc(L.launchers.onlineNow) + '</dd></div><div class="fact"><dt>Latest version</dt><dd>' + esc(L.latestRelease ? "v" + L.latestRelease.version : "n/a") + '</dd></div><div class="fact"><dt>Requests succeeding</dt><dd>' + esc(rate) + '</dd></div><div class="fact"><dt>Database</dt><dd>' + (L.database && L.database.ok ? esc(L.database.latencyMs) + " ms" : "Down") + "</dd></div></dl>";
     }
-    var facts = '<div class="sub">Uptime</div><dl class="facts"><div class="fact"><dt>Last 24 hours</dt><dd>' + up2(p.uptimeDay) + '</dd></div><div class="fact"><dt>Last 7 days</dt><dd>' + up2(p.uptimeWeek) + '</dd></div><div class="fact"><dt>Last 30 days</dt><dd>' + up2(p.uptimeMonth) + '</dd></div><div class="fact"><dt>Last year</dt><dd>' + up2(p.uptimeYear) + "</dd></div></dl>";
+    var lastChecked = (state.meta[p.slug] || {}).lastUpdated;
+    var checkedAt = lastChecked && !isNaN(new Date(lastChecked).getTime()) ? fmtUtc(lastChecked) : "Unavailable";
+    var facts = '<div class="sub">Uptime</div><dl class="facts"><div class="fact"><dt>Last 24 hours</dt><dd>' + up2(p.uptimeDay) + '</dd></div><div class="fact"><dt>Last 7 days</dt><dd>' + up2(p.uptimeWeek) + '</dd></div><div class="fact"><dt>Last 30 days</dt><dd>' + up2(p.uptimeMonth) + '</dd></div><div class="fact"><dt>Last year</dt><dd>' + up2(p.uptimeYear) + '</dd></div><div class="fact"><dt>Last monitor check</dt><dd>' + esc(checkedAt) + "</dd></div></dl>";
+    var maintenanceHtml = maintenance.map(function (m) {
+      return '<div class="maintenance-note"><strong>Maintenance in progress</strong><p>' + esc(m.inc.title) + '</p><p>Started ' + esc(fmtLocal(m.start)) + ' &middot; expected to end ' + esc(fmtLocal(m.end)) + '</p><a href="' + esc(m.inc.url) + '" target="_blank" rel="noopener">Maintenance details</a></div>';
+    }).join("");
     return '<article class="svc" data-slug="' + esc(p.slug) + '" data-s="' + ps.s + '">' +
       '<button class="svc-head" type="button" aria-expanded="' + open + '" aria-controls="b-' + esc(p.slug) + '">' + svg("chev", "chev") +
       '<span class="svc-name">' + esc(p.name) + "</span>" + (ps.flag ? '<span class="svc-flag">' + esc(ps.flag) + "</span>" : "") +
+      (maintenance.length ? '<span class="svc-maint-flag">Maintenance</span>' : "") +
       '<span class="svc-up">' + (up == null ? "No data" : fmtPct(up) + " uptime") + "</span></button>" +
       '<div class="svc-bar">' + barHtml(days) + '<div class="bar-labels"><span>90 days ago</span><span>Today</span></div></div>' +
-      '<div class="svc-body" id="b-' + esc(p.slug) + '"' + (open ? "" : " hidden") + ">" + months + regionHtml + launcherHtml + chart + facts +
+      '<div class="svc-body" id="b-' + esc(p.slug) + '"' + (open ? "" : " hidden") + ">" + maintenanceHtml + months + regionHtml + launcherHtml + chart + facts +
       (cfg.maxResponseTime ? '<p class="note">Counted as degraded when a response takes longer than ' + cfg.maxResponseTime + " ms.</p>" : "") + "</div></article>";
   }
 
@@ -613,7 +719,7 @@
     var now = Date.now();
     var maint = maintItems().filter(function (m) { return m.inc.open && m.end.getTime() > now && m.start.getTime() < now + 7 * 86400000; });
 
-    var html = '<div class="view"><div class="summary" data-s="' + ov.s + '"><span class="summary-dot"></span><div><h1>' + esc(ov.title) + '</h1><p class="summary-meta">' + (ov.text ? esc(ov.text) + '<span class="sep">&middot;</span>' : "") + '<span id="updated">Updated ' + esc(ago(state.fetchedAt)) + '</span><span class="sep">&middot;</span><button class="link-btn" type="button" data-action="refresh">Refresh</button></p></div></div>';
+    var html = '<div class="view"><div class="summary" data-s="' + ov.s + '"><span class="summary-dot"></span><div><h1>' + esc(ov.title) + '</h1><p class="summary-meta">' + (ov.text ? esc(ov.text) + '<span class="sep">&middot;</span>' : "") + '<span id="updated">Page refreshed ' + esc(ago(state.fetchedAt)) + '</span><span class="sep">&middot;</span><button class="link-btn" type="button" data-action="refresh">Refresh</button></p></div></div>';
 
     if (state.incidentsFailed && !state.incidents) {
       html += '<p class="notice block">Incident details are unavailable right now. Check <a href="https://github.com/' + REPO + '/issues">GitHub</a> for updates.</p>';
@@ -630,7 +736,7 @@
     });
     var rest = M.parents.filter(function (s) { return !used[s.slug]; });
     if (rest.length) html += '<h2 class="group-title">Other</h2><div class="rows">' + rest.map(serviceRow).join("") + "</div>";
-    html += '<div class="legend"><span class="key"><i style="background:var(--ok)"></i>No downtime</span><span class="key"><i style="background:var(--warn)"></i>Under 1 hour down</span><span class="key"><i style="background:var(--bad)"></i>1 hour or more down</span><span class="key"><i style="background:var(--nodata)"></i>No data</span></div></div>';
+    html += '<div class="legend"><span class="key"><i style="background:var(--ok)"></i>No downtime</span><span class="key"><i style="background:var(--warn)"></i>Under 1 hour down</span><span class="key"><i style="background:var(--bad)"></i>1 hour or more down</span><span class="key"><i style="background:var(--nodata)"></i>No data</span></div><p class="note uptime-disclaimer">Uptime includes failed checks during planned maintenance.</p></div>';
 
     app.innerHTML = html;
     M.parents.forEach(function (p) { if (isOpen(p)) renderChart(p.slug); });
@@ -721,7 +827,7 @@
       document.body.appendChild(ta);
       ta.select();
       var ok = false;
-      try { ok = document.execCommand("copy"); } catch (e) {}
+      try { ok = document.execCommand("copy"); } catch (e) { }
       ta.remove();
       if (ok) resolve(); else reject(new Error("copy"));
     });
@@ -813,7 +919,7 @@
       }
       link.type = "image/png";
       link.href = c.toDataURL("image/png");
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function setFavicon(s) {
@@ -854,9 +960,9 @@
     state.loading = true;
     var tasks = [getJson([RAW, "data/summary.json"]).then(function (s) { state.summary = s; state.fetchedAt = Date.now(); })];
     if (initial) {
-      tasks.push(getJson("data/meta.json").then(function (m) { state.meta = m; }).catch(function () {}));
-      tasks.push(getJson("groups.json").then(function (g) { if (Array.isArray(g) && g.length) state.groups = g; }).catch(function () {}));
-      tasks.push(getJson("data/config.json").then(function (c) { state.config = c; }).catch(function () {}));
+      tasks.push(getJson("data/meta.json").then(function (m) { state.meta = m; }).catch(function () { }));
+      tasks.push(getJson("groups.json").then(function (g) { if (Array.isArray(g) && g.length) state.groups = g; }).catch(function () { }));
+      tasks.push(getJson("data/config.json").then(function (c) { state.config = c; }).catch(function () { }));
     }
     if (!state.seriesAt || Date.now() - state.seriesAt > SERIES_MS) {
       tasks.push(getJson("data/response.json").then(function (r) { state.series = r; state.seriesAt = Date.now(); }).catch(function () { state.seriesAt = Date.now(); }));
@@ -1006,7 +1112,7 @@
     try {
       var v = localStorage.getItem("theme");
       if (v === "light" || v === "dark" || v === "system") return v;
-    } catch (e) {}
+    } catch (e) { }
     return "dark";
   }
 
@@ -1015,7 +1121,7 @@
     var root = document.documentElement;
     if (pref === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", pref);
-    try { localStorage.setItem("theme", pref); } catch (e) {}
+    try { localStorage.setItem("theme", pref); } catch (e) { }
     paintTheme();
   }
 
@@ -1040,7 +1146,7 @@
 
   setInterval(function () {
     var el = document.getElementById("updated");
-    if (el && state.fetchedAt) el.textContent = "Updated " + ago(state.fetchedAt);
+    if (el && state.fetchedAt) el.textContent = "Page refreshed " + ago(state.fetchedAt);
     if (state.incidents) {
       var items = maintItems();
       app.querySelectorAll("[data-countdown]").forEach(function (n) {

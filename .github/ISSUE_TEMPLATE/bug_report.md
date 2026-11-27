@@ -7,8 +7,6 @@ assignees: 'AnandChowdhary'
 
 ---
 
-<!-- If you have a question, you should use Discussions instead: https://github.com/orgs/upptime/discussions -->
-
 **Describe the bug**
 A clear and concise description of what the bug is.
 

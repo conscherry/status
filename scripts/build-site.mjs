@@ -173,7 +173,7 @@ try {
         html_url: issue.html_url,
         comments_url: issue.comments_url,
         comments: issue.comments,
-        body: isMaintenance ? issue.body : "",
+        body: isMaintenance || labels.includes("status") ? issue.body || "" : "",
         snapshot_comments: issue.state === "closed" ? comments : null,
       };
     }),

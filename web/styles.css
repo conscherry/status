@@ -791,6 +791,36 @@ main.wrap {
   color: color-mix(in srgb, var(--state) 80%, var(--foreground));
 }
 
+.svc-maint-flag {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--info) 45%, var(--border));
+  border-radius: 999px;
+  color: var(--info);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.maintenance-note {
+  margin-top: 1rem;
+  padding: 0.75rem 0.9rem;
+  border-left: 3px solid var(--info);
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--info) 8%, var(--surface));
+  font-size: 0.82rem;
+}
+
+.maintenance-note p {
+  margin-top: 0.2rem;
+}
+
+.maintenance-note a {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: var(--info);
+  font-weight: 600;
+}
+
 .svc-up {
   font-size: 0.8rem;
   font-weight: 500;
@@ -921,6 +951,14 @@ main.wrap {
 }
 
 @media (max-width: 520px) {
+  .svc-head {
+    flex-wrap: wrap;
+  }
+
+  .svc-name {
+    flex-basis: calc(100% - 2rem);
+  }
+
   .region {
     grid-template-columns: 1fr auto;
   }
