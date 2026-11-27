@@ -102,11 +102,11 @@ sites:
     url: $LAUNCHER_API_URL
     icon: https://conscherry.com/projects/launcher-icon.png
     maxResponseTime: 4500
-  - name: Moneta Project
-    url: $MONETA_API_URL
-    icon: https://conscherry.com/projects/moneta-coin.png
-    __dangerous__body_down_if_text_missing: '"ok":true'
-    maxResponseTime: 4500
+  # - name: Moneta Project
+  #   url: $MONETA_API_URL
+  #   icon: https://conscherry.com/projects/moneta-coin.png
+  #   __dangerous__body_down_if_text_missing: '"ok":true'
+  #   maxResponseTime: 4500
   - name: The Gobble Project
     url: https://playgobble.xyz
     maxResponseTime: 4500
